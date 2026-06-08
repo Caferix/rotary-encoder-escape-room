@@ -1,0 +1,64 @@
+# ---- STM32CubeIDE Proje Dosyaları ----
+.project
+.cproject
+.mxproject
+.settings/
+*.sproject
+*.sworkspace
+
+# ---- Derleme Çıktıları ve Geçici Dosyalar ----
+Debug/
+Release/
+build/
+bin/
+obj/
+*.o
+*.a
+*.so
+*.elf
+*.bin
+*.hex
+*.map
+*.d
+*.lst
+
+# ---- STM32 HAL Driver ve CMSIS  ----
+firmware/Drivers/
+Drivers/
+
+# ---- IDE ve Editör Dosyaları ----
+.vscode/
+.idea/
+*.swp
+*~
+*.bak
+*.tmp
+*.user
+*.sln
+*.vcxproj
+*.vcxproj.filters
+
+# ---- Sistem Dosyaları ----
+.DS_Store
+Thumbs.db
+*.exe
+*.dll
+*.so
+*.dylib
+
+# ---- Python ----
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+venv/
+.venv/
+env/
+.env
+
+# ---- Diğer ----
+*.orig
+*.rej
+*.class
+node_modules/
