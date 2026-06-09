@@ -105,39 +105,65 @@ int main(void)
 /* USER CODE BEGIN WHILE */
   while (1)
   {
-      // 1. Fiziksel Reset Butonu Kontrolü (PB1)
+      // 1. Fiziksel Reset Butonu Kontrolü ve Debounce Güvenliği (PB1)
       if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_1) == GPIO_PIN_RESET) { 
-          // Butona basıldıysa (Pull-up olduğu için sıfıra düştüyse) tüm sayaçları sıfırla
+          HAL_Delay(50); // Debounce gecikmesi (Gürültüyü engelle)
+          
+          // Sayaçları sıfırla
           enc_counts[0] = 0; enc_counts[1] = 0; enc_counts[2] = 0; enc_counts[3] = 0;
-          HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET); // Kilidi/Röleyi de kapat
+          
+          // Çarkların anlık fiziksel lojik durumlarını (ok yönü orijini) hafızaya kilitle
+          enc_state_history[0] = (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0) << 1) | HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_1);
+          enc_state_history[1] = (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_2) << 1) | HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_3);
+          enc_state_history[2] = (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_6) << 1) | HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_7);
+          enc_state_history[3] = (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_8) << 1) | HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_9);
+
+          HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET); // Kilidi kapat
+          
+          // Buton bırakılana kadar burada bekle (Sürekli tetiklenmeyi engeller)
+          // Timeout: 1 saniye (Buton takıldığında sistemin blok olmasını engelle)
+          uint32_t button_timeout = HAL_GetTick() + 1000;
+          while(HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_1) == GPIO_PIN_RESET && HAL_GetTick() < button_timeout);
       }
 
-      // 2. Python'dan Gelen USB Komutlarının Kontrolü
-      // USB alıcı buffer'ında Python'ın gönderdiği stringleri arıyoruz
-      if (strstr((char*)UserRxBufferFS, "OPEN") != NULL) {
-          HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET); // PB0 pinini 3.3V yap (Röle tetiklensin)
-          memset(UserRxBufferFS, 0, APP_RX_DATA_SIZE);       // Buffer'ı temizle ki sürekli tetiklenmesin
+      // 2. Python'dan Gelen USB Komutlarının Güvenli (Race Condition Korumalı) Kontrolü
+      // Ana buffer'ın anlık kopyasını alıyoruz (Thread-Safe yaklaşım)
+      char rx_copy[APP_RX_DATA_SIZE];
+      __disable_irq(); // Kopyalama esnasında USB kesmesini milisaniyeliğine durdur
+      strncpy(rx_copy, (char*)UserRxBufferFS, APP_RX_DATA_SIZE);
+      memset(UserRxBufferFS, 0, APP_RX_DATA_SIZE); // Orijinal buffer'ı hemen güvenle temizle
+      __enable_irq();  // Kesmeleri geri aç
+
+      // İşlemleri kopyalanan güvenli veri üzerinden yürüt
+      if (strstr(rx_copy, "OPEN") != NULL) {
+          HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET); // Kilidi aç
       }
-      else if (strstr((char*)UserRxBufferFS, "CLOSE") != NULL) {
-          HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET); // PB0 pinini 0V yap (Kilit kapansın)
-          memset(UserRxBufferFS, 0, APP_RX_DATA_SIZE);
+      else if (strstr(rx_copy, "CLOSE") != NULL) {
+          HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET); // Kilidi kapat
+      }
+      else if (strstr(rx_copy, "RESET") != NULL) {
+          // Python'dan gelen yazılımsal sıfırlama emri
+          enc_counts[0] = 0; enc_counts[1] = 0; enc_counts[2] = 0; enc_counts[3] = 0;
       }
 
-      // 3. Verileri Güvenli Bir Şekilde Kopyalama (Atomik Okuma)
-      // Kesme esnasında veriler anlık değişebileceği için yerel değişkenlere kopyalayıp gönderiyoruz
+      // 3. Atomik Veri Okuma (Kesme esnasında değerlerin değişmesine karşı güvence)
       int32_t s1 = enc_counts[0];
       int32_t s2 = enc_counts[1];
       int32_t s3 = enc_counts[2];
       int32_t s4 = enc_counts[3];
 
-      // 4. Veriyi Paketleme ve USB Üzerinden Gönderme
+      // 4. Güvenli Buffer Paketleme (Buffer Overflow Koruması)
       char msg[64];
-      // Çıktı formatı: "12,45,78,23\n" şeklinde olacak
-      int len = sprintf(msg, "%ld,%ld,%ld,%ld\n", s1, s2, s3, s4);
-      CDC_Transmit_FS((uint8_t*)msg, len); // USB hattına veriyi bas
+      // sprintf yerine snprintf kullanarak maksimum 64 bayt sınırını donanımsal olarak koruyoruz
+      int len = snprintf(msg, sizeof(msg), "%ld,%ld,%ld,%ld\n", s1, s2, s3, s4);
+      
+      if (len > 0 && len < sizeof(msg)) {
+          CDC_Transmit_FS((uint8_t*)msg, len); // USB hattına veriyi bas
+      }
 
-      // 5. FPS ve Akıcılık Gecikmesi
-      HAL_Delay(16); // Yaklaşık 60 Hz (Milisaniyede bir veri basıp arayüzü yormuyoruz)
+      // 5. Ekran Yenileme Payı
+      HAL_Delay(16); // ~60 Hz
+  }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -240,7 +266,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
             enc_counts[enc_index]--; // Ters yönde dönüyor, sayacı azalt
         }
 
-        // 4. ADIM: Çarkı 0-79 adım arasına hapsetme (Dairesel döngü)
+        // 4. ADIM: Çarkı 0-19 adım arasına hapsetme (Dairesel döngü)
         if (enc_counts[enc_index] > 19) enc_counts[enc_index] = 0;
         if (enc_counts[enc_index] < 0) enc_counts[enc_index] = 19;
 
