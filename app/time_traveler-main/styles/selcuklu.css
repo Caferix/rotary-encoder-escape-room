@@ -1,0 +1,31 @@
+/* SELÇUKLU (1221, Konya) — lacivert, turkuaz, amber; geometrik desen */
+body.era-selcuklu {
+  --bg:#0A2744; --accent:#1ABC9C; --sym:#F39C12;
+  --ink:#eaf6f4; --panel:rgba(3,16,30,.55);
+}
+body.era-selcuklu #era-selcuklu { display:block; }
+
+#era-selcuklu .geo { position:absolute; left:50%; top:50%; width:170vmax; height:170vmax;
+  margin:-85vmax 0 0 -85vmax; border-radius:50%; pointer-events:none;
+  background: repeating-conic-gradient(from 0deg, rgba(26,188,156,.07) 0deg 5deg, transparent 5deg 22.5deg);
+  animation: sl-spin 240s linear infinite; }
+#era-selcuklu .geo2 { width:120vmax; height:120vmax; margin:-60vmax 0 0 -60vmax;
+  background: repeating-conic-gradient(from 11deg, rgba(243,156,18,.06) 0deg 4deg, transparent 4deg 30deg);
+  animation: sl-spinRev 200s linear infinite; }
+#era-selcuklu .bigstar { position:absolute; left:50%; top:42%; width:54vmin; height:54vmin;
+  transform:translate(-50%,-50%); color:rgba(26,188,156,.10);
+  animation: sl-bigstar 120s linear infinite; }
+#era-selcuklu .dervish-wrap { position:absolute; right:7%; bottom:21%; width:13vmin; height:22vmin;
+  perspective:600px; }
+#era-selcuklu .dervish { width:100%; height:100%; color:#04101f;
+  filter: drop-shadow(0 0 10px rgba(26,188,156,.25));
+  animation: sl-dervish 11s linear infinite; transform-style:preserve-3d; }
+#era-selcuklu .lantern { position:absolute; left:8%; top:0; width:7vmin; color:#F39C12;
+  transform-origin: top center; animation: sl-lantern 4.6s ease-in-out infinite alternate;
+  filter: drop-shadow(0 6px 22px rgba(243,156,18,.5)); }
+
+@keyframes sl-spin    { to { transform:rotate(360deg); } }
+@keyframes sl-spinRev { to { transform:rotate(-360deg); } }
+@keyframes sl-bigstar { from { transform:translate(-50%,-50%) rotate(0);} to { transform:translate(-50%,-50%) rotate(360deg);} }
+@keyframes sl-dervish { from { transform:rotateY(0); } to { transform:rotateY(360deg); } }
+@keyframes sl-lantern { from { transform:rotate(-5deg); } to { transform:rotate(5deg); } }

@@ -1,0 +1,16 @@
+{
+  "comment": "Encoder-sembol eşleşmesi ve doğru şifreler. Görseller: assets/icons/<Harf><EncoderNo>.png (G/S/O/T). STM32 ~60 Hz 'c1,c2,c3,c4\\n' ham sayaç akışı gönderir (0-19 dairesel, 5 adım = 1 sembol); PC'den OPEN/CLOSE/RESET komutları alır (bkz. main.c).",
+  "serial": { "baudRate": 115200, "lineEnding": "\n", "stepsPerRev": 20, "stepsPerSymbol": 5, "unlockCommand": "OPEN" },
+  "encoders": [
+    { "id": 1, "positions": ["hayat-agaci", "alti-ok", "at", "cami"] },
+    { "id": 2, "positions": ["gunes", "kurt", "kartal", "hilal"] },
+    { "id": 3, "positions": ["lale", "sanayi", "kilic", "otag"] },
+    { "id": 4, "positions": ["ucak", "yay", "tugra", "yildiz"] }
+  ],
+  "codes": {
+    "gokturk":    [2, 1, 3, 1],
+    "selcuklu":   [0, 2, 2, 3],
+    "osmanli":    [3, 3, 0, 2],
+    "cumhuriyet": [1, 0, 1, 0]
+  }
+}

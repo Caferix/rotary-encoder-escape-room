@@ -1,0 +1,19 @@
+{
+  "name": "zaman-gezgini",
+  "version": "1.0.0",
+  "description": "Zaman Gezgini - Electron.js uygulamasi",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "author": "https://github.com/yziyak",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^42.4.0",
+    "playwright-core": "^1.60.0"
+  },
+  "dependencies": {
+    "@serialport/parser-readline": "^13.0.0",
+    "serialport": "^13.0.0"
+  }
+}

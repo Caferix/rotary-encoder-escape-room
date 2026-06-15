@@ -118,7 +118,7 @@ int main(void)
           enc_state_history[2] = (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_6) << 1) | HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_7);
           enc_state_history[3] = (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_8) << 1) | HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_9);
 
-          HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET); // Kilidi kapat
+          HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET); // Kilidi kapat
           
           // Buton bırakılana kadar burada bekle (Sürekli tetiklenmeyi engeller)
           // Timeout: 1 saniye (Buton takıldığında sistemin blok olmasını engelle)

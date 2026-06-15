@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<title>Zaman Gezgini — Ses Stüdyosu</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Segoe UI', sans-serif; background:#11131a; color:#e8e6df;
+  padding:3vh 4vw; overflow-y:auto; height:100vh; }
+h1 { font-size:3vh; letter-spacing:.2em; color:#F5D76E; margin-bottom:.6vh; }
+.sub { color:#8a8fa3; font-size:1.8vh; margin-bottom:2.4vh; }
+h2 { font-size:2vh; letter-spacing:.25em; color:#1ABC9C; margin:2.6vh 0 1.2vh;
+  border-bottom:1px solid #2a2e3d; padding-bottom:.6vh; }
+button { background:#1d2130; color:#e8e6df; border:1px solid #3a4060; border-radius:8px;
+  padding:1vh 1.4vw; font-size:1.7vh; cursor:pointer; transition:.15s; font-family:inherit; }
+button:hover { background:#2a3050; border-color:#F5D76E; }
+button.active { background:#3d2f12; border-color:#F5D76E; color:#F5D76E; }
+.row { display:flex; flex-wrap:wrap; gap:1vh; }
+.grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:1.4vh; }
+.card { background:#181b26; border:1px solid #2a2e3d; border-radius:12px; padding:1.6vh; }
+.card .ad { font-weight:700; color:#F5D76E; font-size:1.9vh; }
+.card .params { color:#1ABC9C; font-size:1.4vh; margin:.3vh 0 .6vh; }
+.card .desc { color:#9aa0b5; font-size:1.5vh; min-height:4vh; }
+.card .sample { font-style:italic; font-size:1.5vh; color:#cfd3e0; margin:.8vh 0;
+  border-left:3px solid #3a4060; padding-left:.8vw; }
+#voiceInfo { background:#181b26; border:1px solid #2a2e3d; border-radius:12px;
+  padding:1.4vh 1.6vw; font-size:1.6vh; line-height:1.6; }
+#voiceInfo b { color:#F5D76E; }
+.warn { color:#e67e22; }
+.ok { color:#2ecc71; }
+#footer { position:sticky; bottom:0; background:#11131a; padding:1.4vh 0;
+  display:flex; align-items:center; gap:2vw; border-top:1px solid #2a2e3d; margin-top:3vh; }
+#vu { width:220px; height:26px; background:#181b26; border:1px solid #2a2e3d; border-radius:6px; }
+input[type=range] { width:180px; accent-color:#F5D76E; }
+.note { font-size:1.4vh; color:#6b7188; margin-top:.8vh; line-height:1.5; }
+</style>
+</head>
+<body>
+<h1>🎚️ ZAMAN GEZGİNİ — SES STÜDYOSU</h1>
+<div class="sub">AudioManager test paneli · tüm müzik ve efektler Web Audio sentezi, seslendirme Web Speech API</div>
+
+<div id="voiceInfo">TTS sesleri yükleniyor…</div>
+
+<h2>DÖNEM MÜZİKLERİ + ORTAM (crossfade ile geçiş)</h2>
+<div class="row" id="eraRow">
+  <button data-era="gokturk">🪕 Göktürk — kopuz · davul · rüzgâr</button>
+  <button data-era="selcuklu">🎶 Selçuklu — ud · ney · çeşme · taş yontma</button>
+  <button data-era="osmanli">🥁 Osmanlı — mehter · dron · kalabalık · meşale</button>
+  <button data-era="cumhuriyet">🎹 Cumhuriyet — piyano · yaylı · telgraf · kuşlar</button>
+  <button data-era="stop">⏹ Durdur</button>
+</div>
+
+<h2>KARAKTER SESLENDİRME (Web Speech profilleri)</h2>
+<div class="grid" id="charGrid"></div>
+<div class="note">Kısıtlar: Işık'ın reverb'i OS ses çıkışına uygulanamaz — konuşma sırasında
+parıltı çanlarıyla (shimmer) verilir. Osman Dede'nin telefon filtresi ve Murat'ın titremesi
+yalnız önceden kayıtlı seslerle mümkündür (bkz. ölçekleme önerileri).</div>
+
+<h2>EFEKTLER</h2>
+<div class="row" id="sfxRow">
+  <button data-sfx="encoder">Encoder tık</button>
+  <button data-sfx="select">Encoder seçim</button>
+  <button data-sfx="correct">Doğru ✓</button>
+  <button data-sfx="wrong">Yanlış ✗</button>
+  <button data-sfx="chime">Yuva çanı</button>
+  <button data-sfx="clank">Mandal</button>
+  <button data-sfx="cannon">Top sesi</button>
+  <button data-sfx="bird">Kuş</button>
+  <button data-sfx="type">Daktilo</button>
+  <button data-sfx="fanfare">Fanfar</button>
+  <button data-act="unlock">🔓 Kilit sekansı (5 sn)</button>
+  <button data-act="compass">🧭 Pusula açılışı</button>
+  <button data-whoosh="gokturk">→ Göktürk geçişi</button>
+  <button data-whoosh="selcuklu">→ Selçuklu geçişi</button>
+  <button data-whoosh="osmanli">→ Osmanlı geçişi</button>
+  <button data-whoosh="cumhuriyet">→ Cumhuriyet geçişi</button>
+</div>
+
+<div id="footer">
+  <label>Ana ses: <input type="range" id="master" min="0" max="100" value="80"></label>
+  <button id="mute">🔇 Sustur</button>
+  <canvas id="vu" width="220" height="26"></canvas>
+  <span class="note">VU yalnız Web Audio'yu gösterir (TTS, OS çıkışına gider)</span>
+</div>
+
+<script src="src/audio.js"></script>
+<script>
+'use strict';
+const AM = new AudioManager();
+window.AM = AM;            // test kancası
+AM.init();
+document.addEventListener('click', () => AM.init(), { once:true });
+
+/* Karakter kartları */
+const grid = document.getElementById('charGrid');
+Object.entries(AM.CHARACTERS).forEach(([id, c]) => {
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.innerHTML =
+    `<div class="ad">${c.ad}</div>` +
+    `<div class="params">pitch ${c.pitch} · rate ${c.rate}` +
+    (c.pauses ? ' · uzun duraklamalar' : '') + (c.shimmer ? ' · shimmer' : '') + `</div>` +
+    `<div class="desc">${c.desc}</div>` +
+    `<div class="sample">“${c.sample}”</div>` +
+    `<button data-char="${id}">🔊 Dinle</button>`;
+  grid.appendChild(card);
+});
+
+/* Tıklama yönlendirme */
+document.body.addEventListener('click', async e => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  AM.init();
+  if (b.dataset.era){
+    document.querySelectorAll('#eraRow button').forEach(x => x.classList.remove('active'));
+    if (b.dataset.era === 'stop') AM.stopMusic();
+    else { AM.playEra(b.dataset.era); b.classList.add('active'); }
+  }
+  else if (b.dataset.sfx) AM.sfx(b.dataset.sfx, Math.floor(Math.random()*4));
+  else if (b.dataset.whoosh) AM.transitionWhoosh(b.dataset.whoosh);
+  else if (b.dataset.act === 'unlock') AM.unlockSequence();
+  else if (b.dataset.act === 'compass') AM.compassIntro();
+  else if (b.dataset.char){
+    b.disabled = true;
+    await AM.speak(b.dataset.char, AM.CHARACTERS[b.dataset.char].sample);
+    b.disabled = false;
+  }
+  else if (b.id === 'mute') b.textContent = AM.toggleMute() ? '🔊 Sesi aç' : '🔇 Sustur';
+});
+document.getElementById('master').addEventListener('input', e => AM.setMaster(e.target.value/100 * 1.1));
+
+/* TTS durum raporu */
+function refreshVoices(){
+  const v = AM.voiceInfo();
+  const el = document.getElementById('voiceInfo');
+  if (!v.total){ el.innerHTML = '<b>TTS:</b> <span class="warn">henüz ses listesi gelmedi…</span>'; return; }
+  el.innerHTML = `<b>TTS durumu:</b> toplam ${v.total} ses · ` +
+    (v.turkish.length
+      ? `<span class="ok">Türkçe: ${v.turkish.join(', ')}</span> · seçili: <b>${v.selected}</b>`
+      : `<span class="warn">Türkçe ses bulunamadı — varsayılan ses kullanılacak (telaffuz bozuk olabilir).
+         Windows: Ayarlar → Zaman ve Dil → Konuşma → Ses ekle → Türkçe</span>`);
+}
+refreshVoices();
+if ('speechSynthesis' in window)
+  speechSynthesis.addEventListener('voiceschanged', refreshVoices);
+setTimeout(refreshVoices, 1500);
+
+/* VU metre */
+const vu = document.getElementById('vu').getContext('2d');
+(function draw(){
+  const lvl = Math.min(1, AM.level() * 4);
+  vu.clearRect(0, 0, 220, 26);
+  const grad = vu.createLinearGradient(0, 0, 220, 0);
+  grad.addColorStop(0, '#1ABC9C'); grad.addColorStop(.7, '#F5D76E'); grad.addColorStop(1, '#E74C3C');
+  vu.fillStyle = grad;
+  vu.fillRect(2, 4, 216 * lvl, 18);
+  requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>

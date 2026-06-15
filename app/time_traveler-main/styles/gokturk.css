@@ -1,0 +1,20 @@
+/* GÖKTÜRK (735) — koyu toprak, yanık turuncu, altın; gece bozkırı */
+body.era-gokturk {
+  --bg:#2C1810; --accent:#D4821A; --sym:#F5D76E;
+  --ink:#f5e9d8; --panel:rgba(20,10,4,.55);
+}
+body.era-gokturk #era-gokturk { display:block; }
+
+#era-gokturk .moon { position:absolute; top:9%; right:14%; width:9vmin; height:9vmin; color:#f6f1d3;
+  filter: drop-shadow(0 0 18px rgba(246,241,211,.55));
+  animation: gk-moonDrift 140s ease-in-out infinite alternate; }
+#era-gokturk .eagle { position:absolute; top:16%; left:0; width:7vmin; color:#0e0703;
+  animation: gk-eagleFly 34s linear infinite; }
+#era-gokturk .eagle svg { width:100%; animation: gk-eagleBob 3s ease-in-out infinite alternate; }
+
+@keyframes gk-moonDrift { from { transform:translate(0,0); } to { transform:translate(-14vw,2.5vh); } }
+@keyframes gk-eagleFly {
+  0%   { transform:translateX(106vw) translateY(0)    scale(.85); }
+  50%  { transform:translateX(46vw)  translateY(5vh)  scale(1.1); }
+  100% { transform:translateX(-12vw) translateY(-2vh) scale(.9); } }
+@keyframes gk-eagleBob { from { transform:translateY(-.6vh) rotate(-2deg);} to { transform:translateY(.6vh) rotate(2deg);} }

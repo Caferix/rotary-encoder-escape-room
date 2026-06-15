@@ -5,6 +5,9 @@
 .settings/
 *.sproject
 *.sworkspace
+*.ioc~
+*.ioc.bak
+*.ioc.prev
 
 # ---- Derleme Çıktıları ve Geçici Dosyalar ----
 Debug/
@@ -21,6 +24,11 @@ obj/
 *.map
 *.d
 *.lst
+*.su
+*.i
+*.out
+*.sym
+*.out.map
 
 # ---- STM32 HAL Driver ve CMSIS  ----
 firmware/Drivers/
@@ -45,6 +53,16 @@ Thumbs.db
 *.dll
 *.so
 *.dylib
+core
+core.*
+*.core
+
+# ---- CMake Build Files ----
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+*.cmake
+Makefile.user
 
 # ---- Python ----
 __pycache__/
@@ -57,8 +75,32 @@ venv/
 env/
 .env
 
+# ---- Node.js / Electron ----
+node_modules/
+dist/
+out/
+npm-debug.log*
+*.log
+
+# ---- Debugger ve Profiler ----
+.gdbinit
+*.gdb
+.lldbinit
+.gdbhistory
+.lldb-debugger-output
+openocd.log
+*.trace
+
+# ---- Geçici Dosyalar ----
+~$*.docx
+
+# ---- Kod Indexing ----
+tags
+TAGS
+cscope.*
+.clang_format_exclude
+
 # ---- Diğer ----
 *.orig
 *.rej
 *.class
-node_modules/

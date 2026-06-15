@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<title>Zaman Gezgini — STM32 Encoder Test Konsolu</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Consolas','Segoe UI',monospace; background:#0d1117; color:#e6edf3;
+  padding:3vh 3vw; height:100vh; overflow-y:auto; }
+h1 { font-size:2.6vh; letter-spacing:.15em; color:#F5D76E; margin-bottom:.5vh; }
+.sub { color:#7d8590; font-size:1.6vh; margin-bottom:2vh; }
+#status { padding:1.2vh 1.6vw; border-radius:10px; font-size:1.9vh; margin-bottom:2.4vh;
+  background:#21262d; border:1px solid #30363d; }
+#status.serial { border-color:#2ecc71; color:#2ecc71; }
+#status.mock   { border-color:#e67e22; color:#e67e22; }
+#grid { display:grid; grid-template-columns:repeat(4,1fr); gap:1.6vw; margin-bottom:2.4vh; }
+.enc { background:#161b22; border:1px solid #30363d; border-radius:14px; padding:1.8vh 1.2vw; text-align:center; }
+.enc h3 { font-size:1.7vh; letter-spacing:.2em; color:#79c0ff; margin-bottom:1vh; }
+.enc .count { font-size:6vh; font-weight:700; color:#F5D76E; font-variant-numeric:tabular-nums; }
+.enc .count.flash { animation: flash .25s; }
+@keyframes flash { 0% { color:#fff; } }
+.enc .bar { height:1.2vh; background:#21262d; border-radius:6px; margin:1.2vh 0; overflow:hidden; }
+.enc .bar i { display:block; height:100%; background:linear-gradient(90deg,#1ABC9C,#F5D76E); width:0%;
+  transition:width .12s; border-radius:6px; }
+.enc .posrow { display:flex; justify-content:center; gap:.5vw; margin-top:1vh; }
+.enc .pp { width:4vh; height:4vh; border-radius:50%; border:2px solid #30363d; display:flex;
+  align-items:center; justify-content:center; font-size:1.8vh; color:#7d8590; transition:.15s; }
+.enc .pp.on { border-color:#F5D76E; color:#0d1117; background:#F5D76E; font-weight:700;
+  box-shadow:0 0 1.4vh rgba(245,215,110,.5); }
+.enc .dir { margin-top:1vh; font-size:2.4vh; min-height:3vh; color:#2ecc71; }
+#controls { display:flex; gap:1vw; align-items:center; margin-bottom:2vh; flex-wrap:wrap; }
+button { background:#21262d; color:#e6edf3; border:1px solid #30363d; border-radius:8px;
+  padding:1.2vh 1.8vw; font-size:1.8vh; cursor:pointer; font-family:inherit; }
+button:hover { border-color:#F5D76E; }
+button.danger:hover { border-color:#e74c3c; color:#e74c3c; }
+#rate { color:#7d8590; font-size:1.6vh; margin-left:auto; }
+#log { background:#161b22; border:1px solid #30363d; border-radius:10px; padding:1.2vh 1.2vw;
+  font-size:1.5vh; line-height:1.7; height:24vh; overflow-y:auto; color:#9da7b3; }
+#log .ev { color:#79c0ff; } #log .cmd { color:#F5D76E; } #log .err { color:#e74c3c; }
+.note { margin-top:1.4vh; font-size:1.4vh; color:#7d8590; line-height:1.6; }
+</style>
+</head>
+<body>
+<h1>🔧 STM32 ENCODER TEST KONSOLU</h1>
+<div class="sub">Protokol: STM32 → "c1,c2,c3,c4\n" @ ~60 Hz (0-19) · PC → OPEN / CLOSE / RESET · 5 adım = 1 sembol</div>
+
+<div id="status">Seri port durumu bekleniyor…</div>
+
+<div id="portbar" style="display:flex; gap:1vw; align-items:center; margin-bottom:2vh; flex-wrap:wrap;">
+  <select id="portSel" style="background:#21262d; color:#e6edf3; border:1px solid #30363d;
+    border-radius:8px; padding:1vh 1vw; font-size:1.7vh; font-family:inherit; min-width:30vw;"></select>
+  <button id="bRefresh">🔄 Portları Tara</button>
+  <button id="bConnect">🔌 Bu Porta Bağlan</button>
+  <span id="lastLine" style="color:#7d8590; font-size:1.5vh;">ham satır: —</span>
+</div>
+
+<div id="grid"></div>
+
+<div id="controls">
+  <button id="bOpen">🔓 OPEN (solenoid aç)</button>
+  <button id="bClose">🔒 CLOSE (kilidi kapat)</button>
+  <button id="bReset" class="danger">⟲ RESET (sayaçları sıfırla)</button>
+  <span id="rate">akış: — satır/sn</span>
+</div>
+
+<div id="log"></div>
+<div class="note">
+  Donanım yokken bu sayfa "mock" modda kalır ve veri akmaz — STM32'yi bağlayıp
+  uygulamayı yeniden başlat (otomatik bulunamazsa <code>npm start -- --page=encoder-test.html --port=COMx</code>).
+  Fiziksel reset butonu (PB1) tüm sayaçları 0'a çeker ve kilidi kapatır.
+</div>
+
+<script>
+'use strict';
+const $ = s => document.querySelector(s);
+
+/* 4 encoder kartı */
+const cards = [];
+for (let i = 0; i < 4; i++) {
+  const d = document.createElement('div');
+  d.className = 'enc';
+  d.innerHTML = `<h3>ENCODER ${i + 1}</h3>
+    <div class="count">–</div>
+    <div class="bar"><i></i></div>
+    <div class="posrow">${[0,1,2,3].map(p => `<div class="pp" data-p="${p}">${p}</div>`).join('')}</div>
+    <div class="dir"></div>`;
+  $('#grid').appendChild(d);
+  cards.push({
+    el: d, count: d.querySelector('.count'), bar: d.querySelector('.bar i'),
+    pps: [...d.querySelectorAll('.pp')], dir: d.querySelector('.dir'),
+    lastCount: null, lastPos: null,
+  });
+}
+
+const log = (msg, cls) => {
+  const l = $('#log');
+  const line = document.createElement('div');
+  if (cls) line.className = cls;
+  line.textContent = new Date().toLocaleTimeString('tr-TR') + '  ' + msg;
+  l.prepend(line);
+  while (l.children.length > 120) l.lastChild.remove();
+};
+
+if (!window.encoderAPI) {
+  $('#status').textContent = 'HATA: encoderAPI yok (preload yüklenmedi?)';
+  $('#status').className = 'mock';
+} else {
+  window.encoderAPI.onStatus(s => {
+    $('#status').textContent = s.mode === 'serial'
+      ? `✅ STM32 BAĞLI — ${s.detail} @ 115200 baud`
+      : `⚠ MOCK MOD — ${s.detail}`;
+    $('#status').className = s.mode;
+    log('durum: ' + s.mode + ' (' + s.detail + ')');
+  });
+
+  /* Ham sayaç akışı (60 Hz) */
+  let lines = 0;
+  window.encoderAPI.onRaw(d => {
+    lines++;
+    d.counts.forEach((c, i) => {
+      const card = cards[i];
+      if (card.lastCount !== c) {
+        card.count.textContent = c;
+        card.count.classList.remove('flash'); void card.count.offsetWidth;
+        card.count.classList.add('flash');
+        if (card.lastCount !== null) {
+          // dairesel sarmayı hesaba katarak yön
+          let d2 = c - card.lastCount;
+          if (d2 > 10) d2 -= 20; else if (d2 < -10) d2 += 20;
+          card.dir.textContent = d2 > 0 ? '↻ saat yönü (+' + d2 + ')' : '↺ ters yön (' + d2 + ')';
+        }
+        card.lastCount = c;
+      }
+      const cc = ((c % 20) + 20) % 20;
+      card.bar.style.width = (cc / 19 * 100) + '%';
+    });
+  });
+
+  /* Pozisyon değişimleri (oyunun gördüğü olaylar) */
+  window.encoderAPI.onData(d => {
+    const card = cards[d.enc - 1];
+    card.pps.forEach(pp => pp.classList.toggle('on', +pp.dataset.p === d.pos));
+    if (card.lastPos !== d.pos) {
+      log(`E${d.enc}: pozisyon ${card.lastPos === null ? '?' : card.lastPos} → ${d.pos}`, 'ev');
+      card.lastPos = d.pos;
+    }
+  });
+
+  /* Ham satır monitörü: ayrıştırılamayan veri de görünsün */
+  window.encoderAPI.onLine(l => {
+    $('#lastLine').textContent = 'ham satır: "' + l + '"';
+  });
+
+  /* Port seçici — ST-Link VCP ile USB CDC'yi karıştırmamak için */
+  async function refreshPorts() {
+    const ports = await window.encoderAPI.listPorts();
+    const sel = $('#portSel');
+    sel.innerHTML = '';
+    if (!ports.length) {
+      sel.innerHTML = '<option>— hiç port yok —</option>';
+      log('port taraması: hiç COM portu bulunamadı', 'err');
+      return;
+    }
+    ports.forEach(p => {
+      const o = document.createElement('option');
+      o.value = p.path;
+      const vid = (p.vendorId || '????').toLowerCase(), pid = (p.productId || '????').toLowerCase();
+      let tag = '';
+      if (vid === '0483' && pid === '5740') tag = ' ← STM32 USB CDC (BUNU SEÇ)';
+      else if (vid === '0483') tag = ' (ST-Link VCP — muhtemelen yanlış port)';
+      o.textContent = `${p.path} · VID:${vid} PID:${pid} · ${p.manufacturer || '?'}${tag}`;
+      sel.appendChild(o);
+      log(`port: ${o.textContent}`);
+    });
+    const best = ports.find(p => (p.vendorId||'').toLowerCase()==='0483' && (p.productId||'').toLowerCase()==='5740');
+    if (best) sel.value = best.path;
+  }
+  $('#bRefresh').onclick = refreshPorts;
+  $('#bConnect').onclick = () => {
+    const p = $('#portSel').value;
+    if (p && !p.startsWith('—')) { log('bağlanılıyor: ' + p, 'cmd'); window.encoderAPI.openPort(p); }
+  };
+  refreshPorts();
+
+  /* Komut butonları */
+  const send = c => { window.encoderAPI.send(c); log('PC → STM32: ' + c, 'cmd'); };
+  $('#bOpen').onclick  = () => send('OPEN');
+  $('#bClose').onclick = () => send('CLOSE');
+  $('#bReset').onclick = () => send('RESET');
+
+  setInterval(() => {
+    $('#rate').textContent = 'akış: ' + lines + ' satır/sn';
+    lines = 0;
+  }, 1000);
+}
+</script>
+</body>
+</html>

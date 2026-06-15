@@ -1,0 +1,26 @@
+/* CUMHURİYET (1923, Ankara) — açık gri-beyaz, Türk kırmızısı, lacivert; sabah */
+body.era-cumhuriyet {
+  --bg:#FAFAFA; --accent:#E74C3C; --sym:#2C3E50;
+  --ink:#2C3E50; --panel:rgba(255,255,255,.65);
+}
+body.era-cumhuriyet #era-cumhuriyet { display:block; }
+
+#era-cumhuriyet .sun { position:absolute; left:50%; top:24%; width:44vmin; height:44vmin; margin-left:-22vmin;
+  border-radius:50%;
+  background: radial-gradient(circle, #fff6cf 0%, rgba(255,221,130,.65) 35%, transparent 70%);
+  animation: ch-sunrise 80s ease-in-out infinite alternate; }
+#era-cumhuriyet .flag { position:absolute; left:4%; top:5%; width:17vmin; }
+#era-cumhuriyet .flag .cloth { transform-origin:left center; animation: ch-flag 2.6s ease-in-out infinite; }
+#era-cumhuriyet .telegraph { position:absolute; right:6%; bottom:20%; width:22vmin; color:#2C3E50;
+  animation: ch-tgIdle 3.4s ease-in-out infinite alternate; }
+#era-cumhuriyet .telegraph #tg-arm { transform-origin:70px 78px; animation: ch-tgTap 3.4s ease-in-out infinite; }
+
+@keyframes ch-sunrise { from { transform:translateY(26vh) scale(.92); opacity:.75; }
+                        to   { transform:translateY(-4vh) scale(1.05); opacity:1; } }
+@keyframes ch-flag {
+  0%,100% { transform:skewY(0deg)   translateY(0); }
+  25%     { transform:skewY(2.4deg) translateY(1px); }
+  50%     { transform:skewY(-1.2deg) translateY(0); }
+  75%     { transform:skewY(2deg)   translateY(-1px); } }
+@keyframes ch-tgIdle { from { transform:translateY(0);} to { transform:translateY(.5vh);} }
+@keyframes ch-tgTap { 0%,55%,100% { transform:rotate(0deg);} 62%{transform:rotate(-4deg);} 68%{transform:rotate(0);} 74%{transform:rotate(-4deg);} 80%{transform:rotate(0);} }
